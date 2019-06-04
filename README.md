@@ -12,9 +12,9 @@ Pytorch implementation of u-nets.
 ### Cascaded U-Net
 - [Glioma Segmentation with Cascaded Unet (*2018*)](https://arxiv.org/pdf/1810.04008.pdf)
 
-### Loss
+### Dice Loss
 - [Generalised Dice overlap as a deep learning loss function for highly unbalanced segmentations (*2017*)](https://arxiv.org/pdf/1707.03237.pdf)
-- [V-Net: Fully Convolutional Neural Networks for Volumetric Medical Image Segmentation *2016*](https://arxiv.org/pdf/1606.04797.pdf)
+- [V-Net: Fully Convolutional Neural Networks for Volumetric Medical Image Segmentation *(2016)*](https://arxiv.org/pdf/1606.04797.pdf)
 
 ## References
 https://github.com/milesial/Pytorch-UNet/tree/master/unet
