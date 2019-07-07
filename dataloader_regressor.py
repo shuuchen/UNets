@@ -1,4 +1,5 @@
 import os
+import cv2
 import numpy as np
 import torch
 from torch.utils.data import Dataset
@@ -13,34 +14,50 @@ class RoomDataset(Dataset):
 
         self.img_list = []
         self.label_list = []
-        for img in [f for f in os.listdir(self.file_path) if 'image' in f]:
-            self.img_list += [img]
-            self.label_list += [img.replace('image', 'room')]
+        
+        with open(file_path) as f:
+            self.list = f.readlines()
+        f.close()
+        
+        self.list = [l[:-1] for l in self.list]
+        
+        self.img_dir = '../../data/image'
+        self.label_dir = '../../data/height_arr'
 
     def __len__(self):
-        return len(self.img_list)
+        return len(self.list)
 
     # convert PIL image to ndarray
-    def _pil2np(img):
+    def _pil2np(self, img):
         if isinstance(img, Image.Image):
             img = np.asarray(img)
         return img
 
     # convert ndarray to PIL image
-    def _np2pil(img):
+    def _np2pil(self, img):
         if isinstance(img, np.ndarray):
             if img.dtype != np.uint8:
                 img = img.astype(np.uint8)
             img = F.to_pil_image(img)
         return img
+    
+    def _to_tensor(self, array):
+        assert (isinstance(array, np.ndarray))
+        # handle numpy array
+        try:
+            tensor = torch.from_numpy(array).permute(2, 0, 1)
+        except:
+            tensor = torch.from_numpy(np.expand_dims(array, axis=2)).permute(2, 0, 1)
+        # put it from HWC to CHW format
+        return tensor.float()
 
     def __getitem__(self, index):
         
-        image = np.load(os.path.join(self.file_path, self.img_list[index]))[:, :, ::-1]
-        label = np.load(os.path.join(self.file_path, self.label_list[index]))
+        image = cv2.imread(os.path.join(self.img_dir, self.list[index] + '.png'))
+        label = np.load(os.path.join(self.label_dir, self.list[index] + '.npy'))
 
-        height, width = image.shape[1:]
-        ch_label = label[2]
+        height, width = label.shape
+        ch_label = 1
 
         if self.train and self.augment:
           # random rotations
@@ -65,4 +82,4 @@ class RoomDataset(Dataset):
               image = np.dstack([F.resized_crop(_np2pil(image[:, :, ii]), i, j, h, w, (height, width)) for ii in range(3)])
               label = np.dstack([F.resized_crop(_np2pil(label[:, :, ii]), i, j, h, w, (height, width)) for ii in range(ch_label)])
 
-        return image, label
+        return self._to_tensor(image), self._to_tensor(label)
