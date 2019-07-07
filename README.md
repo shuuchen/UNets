@@ -1,6 +1,12 @@
 # UNets
 Pytorch implementation of u-nets.
 
+## Command lines
+- train
+  ```
+  python train_regression.py --train-image-path ./data/ny_hei_train.txt \
+                             --val-image-path ./data/ny_hei_val.txt
+  ```
 
 ## Papers
 ### U-Net
