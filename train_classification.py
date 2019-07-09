@@ -53,7 +53,8 @@ def train(args, model, train_dataset, val_dataset):
                                       dataset=train_dataset, num_workers=args.workers)
     
     df_loss = pd.DataFrame()
-    
+    best_loss = np.float('inf')
+
     for epoch in range(args.epochs):
         print('training epoch %d/%s' % (epoch+1, args.epochs))
         batch_train_losses = []
@@ -87,16 +88,17 @@ def train(args, model, train_dataset, val_dataset):
         eval_losses.append(eval_loss)
         
         # update output loss file after per epoch
-        df_loss.assign(train=train_losses, val=eval_losses).to_csv('./loss.csv')
+        df_loss.assign(train=train_losses, val=eval_losses).to_csv('./loss_classification.csv')
 
         # save model    
-        if (epoch + 1) % 50 == 0:
-            torch.save(model.state_dict(), args.checkpoint + '/checkpoint_%d.pth' % (epoch + 1))
-            torch.save(optimizer.state_dict(), args.checkpoint + '/optim_%d.pth' % (epoch + 1))
+        if epo_train_loss < best_loss:
+            best_loss = epo_train_loss
+            torch.save(model.state_dict(), args.checkpoint + '/checkpoint_best.pth')
+            torch.save(optimizer.state_dict(), args.checkpoint + '/optim_best.pth')
         
         # update learning rate
-        if (epoch + 1) % 20 == 0:
-            curr_lr /= 3
+        #if (epoch + 1) % 20 == 0:
+            #curr_lr /= 3
             #update_lr(optimizer, curr_lr)
 
 def update_lr(optimizer, lr):
@@ -126,7 +128,7 @@ def evaluate(args, model, criterion, val_dataset, epo_no):
         
         mean_val_loss = np.mean(losses)
 
-        if epo_no % 50 == 0:
+        if epo_no % 10 == 0:
             np.save('./val_res/val_images_%d.npy' % epo_no, images.cpu().numpy())
             np.save('./val_res/val_labels_%d.npy' % epo_no, labels.cpu().numpy())
             np.save('./val_res/val_preds_%d.npy' % epo_no, outputs.cpu().numpy())
