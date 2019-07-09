@@ -57,29 +57,27 @@ class RoomDataset(Dataset):
         label = np.load(os.path.join(self.label_dir, self.list[index] + '.npy'))
 
         height, width = label.shape
-        ch_label = 1
-
         if self.train and self.augment:
           # random rotations
           if np.random.randint(2) == 0:
               ang = np.random.choice([90, -90])
-              image = np.dstack([F.rotate(_np2pil(image[:, :, i]), ang) for i in range(3)])
-              label = np.dstack([F.rotate(_np2pil(label[:, :, i]), ang) for i in range(ch_label)])
+              image = np.dstack([F.rotate(self._np2pil(image[:, :, i]), ang) for i in range(3)])
+              label = np.asarray(F.rotate(self._np2pil(label), ang))
 
           # random h-flips
           if np.random.randint(2) == 0:
-              image = np.dstack([F.hflip(_np2pil(image[:, :, i])) for i in range(3)])
-              label = np.dstack([F.hflip(_np2pil(label[:, :, i])) for i in range(ch_label)])
+              image = np.dstack([F.hflip(self._np2pil(image[:, :, i])) for i in range(3)])
+              label = np.asarray(F.hflip(self._np2pil(label)))
 
           # random v-flips
           if np.random.randint(2) == 0:
-              image = np.dstack([F.vflip(_np2pil(image[:, :, i])) for i in range(3)])
-              label = np.dstack([F.vflip(_np2pil(label[:, :, i])) for i in range(ch_label)])
+              image = np.dstack([F.vflip(self._np2pil(image[:, :, i])) for i in range(3)])
+              label = np.asarray(F.vflip(self._np2pil(label)))
 
           # random crops
           if np.random.randint(2) == 0:
-              i, j, h, w = transforms.RandomCrop.get_params(_np2pil(label), output_size=(height//2, width//2))
-              image = np.dstack([F.resized_crop(_np2pil(image[:, :, ii]), i, j, h, w, (height, width)) for ii in range(3)])
-              label = np.dstack([F.resized_crop(_np2pil(label[:, :, ii]), i, j, h, w, (height, width)) for ii in range(ch_label)])
+              i, j, h, w = transforms.RandomCrop.get_params(self._np2pil(label), output_size=(height//2, width//2))
+              image = np.dstack([F.resized_crop(self._np2pil(image[:, :, ii]), i, j, h, w, (height, width)) for ii in range(3)])
+              label = np.asarray(F.resized_crop(self._np2pil(label), i, j, h, w, (height, width)))
 
         return self._to_tensor(image), self._to_tensor(label)
