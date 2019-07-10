@@ -69,7 +69,6 @@ def train(args, model, train_dataset, val_dataset):
             outputs = model(images)
     
             # loss
-            #print(outputs.size(), labels.size())
             train_loss = criterion(outputs, labels)
             batch_train_losses.append(train_loss.item())
         
@@ -91,6 +90,11 @@ def train(args, model, train_dataset, val_dataset):
         df_loss.assign(train=train_losses, val=eval_losses).to_csv('./loss_classification.csv')
 
         # save model    
+        if (epoch + 1) % 50 == 0:
+            torch.save(model.state_dict(), args.checkpoint + '/checkpoint_%d.pth' % (epoch + 1))
+            torch.save(optimizer.state_dict(), args.checkpoint + '/optim_%d.pth' % (epoch + 1))
+
+        # save best model    
         if epo_train_loss < best_loss:
             best_loss = epo_train_loss
             torch.save(model.state_dict(), args.checkpoint + '/checkpoint_best.pth')
