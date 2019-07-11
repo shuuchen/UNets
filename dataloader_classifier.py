@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from image_augment import *
+from image_augment_pairs import *
 
 class RoomDataset(Dataset):
     def __init__(self, file_path, train=True, augment=False):
@@ -17,7 +17,6 @@ class RoomDataset(Dataset):
     def __len__(self):
         return len(self.img_list)
 
-    # from ndarray to pytorch tensor
     def _to_tensor(self, array, is_label=False):
         assert (isinstance(array, np.ndarray))
         tensor = torch.from_numpy(array)
@@ -31,13 +30,17 @@ class RoomDataset(Dataset):
         height, width = label.shape
 
         if self.train and self.augment:
+
           # random rotations
-          random_rotation
+          random_rotation(image, label)
 
           # random h-flips
+          horizontal_flip(image, label)
 
           # random v-flips
+          vertical_flip(image, label)
 
           # random crops
+          scale_augmentation(image, label)
 
         return self._to_tensor(image).permute(2,0,1), self._to_tensor(label, is_label=True)

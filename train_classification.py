@@ -91,14 +91,14 @@ def train(args, model, train_dataset, val_dataset):
 
         # save model    
         if (epoch + 1) % 50 == 0:
-            torch.save(model.state_dict(), args.checkpoint + '/checkpoint_%d.pth' % (epoch + 1))
-            torch.save(optimizer.state_dict(), args.checkpoint + '/optim_%d.pth' % (epoch + 1))
+            torch.save(model.state_dict(), './checkpoint_%d.pth' % (epoch + 1))
+            torch.save(optimizer.state_dict(), './optim_%d.pth' % (epoch + 1))
 
         # save best model    
         if epo_train_loss < best_loss:
             best_loss = epo_train_loss
-            torch.save(model.state_dict(), args.checkpoint + '/checkpoint_best.pth')
-            torch.save(optimizer.state_dict(), args.checkpoint + '/optim_best.pth')
+            torch.save(model.state_dict(), './checkpoint_best.pth')
+            torch.save(optimizer.state_dict(), './optim_best.pth')
         
         # update learning rate
         #if (epoch + 1) % 20 == 0:
@@ -133,9 +133,12 @@ def evaluate(args, model, criterion, val_dataset, epo_no):
         mean_val_loss = np.mean(losses)
 
         if epo_no % 10 == 0:
-            np.save('./val_res/val_images_%d.npy' % epo_no, images.cpu().numpy())
-            np.save('./val_res/val_labels_%d.npy' % epo_no, labels.cpu().numpy())
-            np.save('./val_res/val_preds_%d.npy' % epo_no, outputs.cpu().numpy())
+
+            outputs = torch.argmax(outputs, dim=1).detach().cpu().numpy()
+
+            np.save('./val_images_%d.npy' % epo_no, images.cpu().numpy())
+            np.save('./val_labels_%d.npy' % epo_no, labels.cpu().numpy())
+            np.save('./val_preds_%d.npy' % epo_no, outputs.cpu().numpy())
       
     return mean_val_loss
 
