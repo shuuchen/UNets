@@ -129,11 +129,6 @@ def evaluate(args, model, criterion, val_dataset, epo_no):
         np.save('./val_res_with_aug/val_labels_%d.npy' % epo_no, labels.cpu().numpy().astype(np.float32))
         np.save('./val_res_with_aug/val_preds_%d.npy' % epo_no, outputs.cpu().numpy().astype(np.float32))
       
-        '''
-        save_image(make_grid(images.uint8()), './val_res/val_images_%d.png' % epo_no)
-        save_image(make_grid(labels), './val_res/val_labels_%d.png' % epo_no)
-        save_image(make_grid(outputs), './val_res/val_preds_%d.png' % epo_no)
-        '''
     return mean_val_loss
 
 def test(args, model, test_dataset):
