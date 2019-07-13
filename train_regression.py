@@ -86,12 +86,12 @@ def train(args, model, train_dataset, val_dataset):
         eval_losses.append(eval_loss)
         
         # update output loss file after per epoch
-        df_loss.assign(train=train_losses, val=eval_losses).to_csv('./val_res_with_aug/loss_regression.csv')
+        df_loss.assign(train=train_losses, val=eval_losses).to_csv('./loss_regression.csv')
 
         # save model    
         if (epoch + 1) % 20 == 0:
-            torch.save(model.state_dict(), args.checkpoint + '/checkpoint_%d.pth' % (epoch + 1))
-            torch.save(optimizer.state_dict(), args.checkpoint + '/optim_%d.pth' % (epoch + 1))
+            torch.save(model.state_dict(), './checkpoint_%d.pth' % (epoch + 1))
+            torch.save(optimizer.state_dict(), './optim_%d.pth' % (epoch + 1))
 
         # update learning rate
         #if (epoch + 1) % 20 == 0:
@@ -125,9 +125,9 @@ def evaluate(args, model, criterion, val_dataset, epo_no):
         
         mean_val_loss = np.mean(losses)
 
-        np.save('./val_res_with_aug/val_images_%d.npy' % epo_no, images.cpu().numpy().astype(np.uint8))
-        np.save('./val_res_with_aug/val_labels_%d.npy' % epo_no, labels.cpu().numpy().astype(np.float32))
-        np.save('./val_res_with_aug/val_preds_%d.npy' % epo_no, outputs.cpu().numpy().astype(np.float32))
+        np.save('./val_images_%d.npy' % epo_no, images.cpu().numpy().astype(np.uint8))
+        np.save('./val_labels_%d.npy' % epo_no, labels.cpu().numpy().astype(np.float32))
+        np.save('./val_preds_%d.npy' % epo_no, outputs.cpu().numpy().astype(np.float32))
       
     return mean_val_loss
 

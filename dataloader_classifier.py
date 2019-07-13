@@ -41,6 +41,6 @@ class RoomDataset(Dataset):
           vertical_flip(image, label)
 
           # random crops
-          scale_augmentation(image, label)
+          #scale_augmentation(image, label)
 
         return self._to_tensor(image).permute(2,0,1), self._to_tensor(label, is_label=True)
