@@ -8,6 +8,11 @@ Pytorch implementation of u-nets.
                              --val-image-path ./data/ny_hei_val.txt
   ```
   
+## TODO
+- Data augmentation
+- Other loss functions
+- Attention mechanism
+
 ## Results
 - L1 loss
 
