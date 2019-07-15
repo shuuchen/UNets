@@ -13,7 +13,7 @@ Pytorch implementation of u-nets.
 
 <img src='tmp_l1/loss_regression.png'>
 
-<img src='tmp_l1/70_3.png'>
+<img src='tmp_l1/70_2.png'>
 <!--- 
 <img src='tmp_l1/70_0.png'>
 <img src='tmp_l1/70_1.png'>
@@ -29,7 +29,7 @@ Pytorch implementation of u-nets.
 
 <img src='tmp_l2/loss_regression_l2.png'>
 
-<img src='tmp_l2/l2_70_3.png'>
+<img src='tmp_l2/l2_70_2.png'>
 <!--- 
 <img src='tmp_l2/l2_70_0.png'>
 <img src='tmp_l2/l2_70_1.png'>
