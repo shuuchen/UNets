@@ -7,7 +7,6 @@ import torch.nn as nn
 import numpy as np
 import pandas as pd
 
-from torchvision.utils import make_grid, save_image
 from torch.utils.data import DataLoader
 from models.res_unet_classifier import ResUNet
 from dataloader_classifier import *

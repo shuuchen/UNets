@@ -7,7 +7,6 @@ import torch.nn as nn
 import numpy as np
 import pandas as pd
 
-from torchvision.utils import make_grid, save_image
 from torch.utils.data import DataLoader
 from models.res_unet_regressor import ResUNet
 from dataloader_regressor import *
@@ -42,7 +41,8 @@ def main(args):
 def train(args, model, train_dataset, val_dataset):
 
     optimizer = torch.optim.Adam(params=model.parameters(), lr=0.001)
-    criterion = nn.L1Loss()
+    #criterion = nn.L1Loss()
+    criterion = nn.MSELoss()
 
     # epoch-wise losses
     train_losses = []
