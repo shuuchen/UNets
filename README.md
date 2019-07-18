@@ -8,11 +8,18 @@ Pytorch implementation of u-nets.
                              --val-image-path ./data/ny_hei_val.txt
   ```
   
+## TODO
+- Data augmentation
+- Other loss functions
+- Attention mechanism
+
 ## Results
 - L1 loss
 
 <img src='tmp_l1/loss_regression.png'>
 
+<img src='tmp_l1/70_2.png'>
+<!--- 
 <img src='tmp_l1/70_0.png'>
 <img src='tmp_l1/70_1.png'>
 <img src='tmp_l1/70_2.png'>
@@ -21,12 +28,14 @@ Pytorch implementation of u-nets.
 <img src='tmp_l1/70_5.png'>
 <img src='tmp_l1/70_6.png'>
 <img src='tmp_l1/70_7.png'>
-
+-->
 
 - L2 loss
 
 <img src='tmp_l2/loss_regression_l2.png'>
 
+<img src='tmp_l2/l2_70_2.png'>
+<!--- 
 <img src='tmp_l2/l2_70_0.png'>
 <img src='tmp_l2/l2_70_1.png'>
 <img src='tmp_l2/l2_70_2.png'>
@@ -35,7 +44,7 @@ Pytorch implementation of u-nets.
 <img src='tmp_l2/l2_70_5.png'>
 <img src='tmp_l2/l2_70_6.png'>
 <img src='tmp_l2/l2_70_7.png'>
-
+-->
 
 ## Papers
 ### U-Net
