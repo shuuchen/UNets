@@ -46,6 +46,12 @@ Pytorch implementation of u-nets.
 <img src='tmp_l2/l2_70_7.png'>
 -->
 
+- log l1 loss + gradient loss + normal vector loss
+<img src='tmp_loss3/loss_regression_loss3.png'>
+
+<img src='tmp_loss3/loss3_100_2.png'>
+
+
 ## Papers
 ### U-Net
 - [U-Net: Convolutional Networks for Biomedical Image Segmentation (*MICCAI, 2015*)](https://arxiv.org/pdf/1505.04597.pdf)
