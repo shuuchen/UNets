@@ -67,4 +67,5 @@ Pytorch implementation of u-nets.
 - [V-Net: Fully Convolutional Neural Networks for Volumetric Medical Image Segmentation *(2016)*](https://arxiv.org/pdf/1606.04797.pdf)
 
 ## References
-https://github.com/milesial/Pytorch-UNet/tree/master/unet
+- https://github.com/milesial/Pytorch-UNet/tree/master/unet
+- https://github.com/JunjH/Revisiting_Single_Depth_Estimation
