@@ -200,10 +200,10 @@ def evaluate(args, model, criterion, val_dataset, epo_no, get_gradient, cos):
         mean_val_loss = np.mean(losses)
 
         if epo_no % 10 == 0:
-            np.save('./val_images_%d.npy' % epo_no, images.cpu().numpy())
+            np.save('./val_images_%d.npy' % epo_no, images.cpu().numpy().astype(np.uint8))
             np.save('./val_labels_%d.npy' % epo_no, labels.cpu().numpy())
             np.save('./val_preds_%d.npy' % epo_no, outputs.cpu().numpy())
-      
+            
     return mean_val_loss
 
 def test(args, model, test_dataset):
