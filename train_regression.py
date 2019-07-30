@@ -1,13 +1,14 @@
 import os
 import argparse
 import torch
+import shutil
+import sobel
 
 import torch.optim as optim
 import torch.nn as nn
 import numpy as np
 import pandas as pd
 
-from torchvision.utils import make_grid, save_image
 from torch.utils.data import DataLoader
 from models.res_unet_regressor import ResUNet
 from dataloader_regressor import *
@@ -26,23 +27,45 @@ def main(args):
         if args.val_image_path:
             val_dataset = RoomDataset(file_path=args.val_image_path)
 
-        # if resume TODO
-
         model = ResUNet(3, 1).to(device)
-        train(args, model, train_dataset, val_dataset)
+        optimizer = torch.optim.Adam(params=model.parameters(), lr=0.0003)
+
+        if args.resume:
+            if not os.path.isfile(args.resume):
+                raise '=> no checkpoint found at %s' % args.resume
+            checkpoint = torch.load(args.resume)
+            args.start_epoch = checkpoint['epoch']
+            args.best_loss = checkpoint['best_loss']
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            print('=> loaded checkpoint %s (epoch %d)' % (args.resume, args.start_epoch))
+
+        train(args, model, optimizer, train_dataset, val_dataset)
 
     else: # test
         if not args.test_image_path: 
-            raise 'test data path should be specified !'
+            raise '=> test data path should be specified'
+        if not args.resume or not os.path.isfile(args.resume):
+            raise '=> resume not specified or no checkpoint found'
         test_dataset = RoomDataset(file_path=args.test_image_path)
         model = ResUNet(3, 1).to(device)
-        model.load_state_dict(torch.load(args.checkpoint + '/checkpoint_100.pth'))
+        checkpoint = torch.load(args.resume)
+        model.load_state_dict(checkpoint['state_dict'])
         test(args, model, test_dataset)
 
-def train(args, model, train_dataset, val_dataset):
 
-    optimizer = torch.optim.Adam(params=model.parameters(), lr=0.001)
+def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
+    torch.save(state, filename)
+    if is_best:
+        shutil.copyfile(filename, 'model_best.pth.tar')
+
+
+def train(args, model, optimizer, train_dataset, val_dataset):
+
     criterion = nn.L1Loss()
+    
+    cos = nn.CosineSimilarity(dim=1, eps=0)
+    get_gradient = sobel.Sobel().cuda()
 
     # epoch-wise losses
     train_losses = []
@@ -53,9 +76,10 @@ def train(args, model, train_dataset, val_dataset):
                                       dataset=train_dataset, num_workers=args.workers)
     
     df_loss = pd.DataFrame()
-    
+    best_loss = args.best_loss
+
     for epoch in range(args.epochs):
-        print('training epoch %d/%s' % (epoch+1, args.epochs))
+        print('training epoch %d/%s' % (args.start_epoch+epoch+1, args.start_epoch+args.epochs))
         batch_train_losses = []
         data_iterator = tqdm(dataloader, total=len(train_dataset) // args.batch_size + 1)
         for i, (images, labels) in enumerate(data_iterator):
@@ -64,11 +88,32 @@ def train(args, model, train_dataset, val_dataset):
         
             images = images.to(device)
             labels = labels.to(device)
+
+            ones = torch.ones(labels.size(0), 1, labels.size(2),labels.size(3)).float().cuda()
+            ones = torch.autograd.Variable(ones)
         
             outputs = model(images)
+            
+            # depth loss + gradient loss + normal loss
+            depth_grad = get_gradient(labels)
+            output_grad = get_gradient(outputs)
+            depth_grad_dx = depth_grad[:, 0, :, :].contiguous().view_as(labels)
+            depth_grad_dy = depth_grad[:, 1, :, :].contiguous().view_as(labels)
+            output_grad_dx = output_grad[:, 0, :, :].contiguous().view_as(labels)
+            output_grad_dy = output_grad[:, 1, :, :].contiguous().view_as(labels)
+
+            depth_normal = torch.cat((-depth_grad_dx, -depth_grad_dy, ones), 1)
+            output_normal = torch.cat((-output_grad_dx, -output_grad_dy, ones), 1)
+
+            loss_depth = torch.log(torch.abs(outputs - labels) + 0.5).mean()
+            loss_dx = torch.log(torch.abs(output_grad_dx - depth_grad_dx) + 0.5).mean()
+            loss_dy = torch.log(torch.abs(output_grad_dy - depth_grad_dy) + 0.5).mean()
+            loss_normal = torch.abs(1 - cos(output_normal, depth_normal)).mean()
+
+            train_loss = loss_depth + loss_normal + (loss_dx + loss_dy)
     
             # loss
-            train_loss = criterion(outputs, labels)
+            #train_loss = criterion(outputs, labels)
             batch_train_losses.append(train_loss.item())
         
             # backward
@@ -81,18 +126,25 @@ def train(args, model, train_dataset, val_dataset):
         print('mean train loss: %.4f' % epo_train_loss)
         train_losses.append(epo_train_loss)
         
-        eval_loss = evaluate(args, model, criterion, val_dataset, epoch+1)
-        print('mean val loss: %.4f' % eval_loss)
-        eval_losses.append(eval_loss)
+        epo_eval_loss = evaluate(args, model, criterion, val_dataset, args.start_epoch+epoch+1, get_gradient, cos)
+        print('mean val loss: %.4f' % epo_eval_loss)
+        eval_losses.append(epo_eval_loss)
         
         # update output loss file after per epoch
         df_loss.assign(train=train_losses, val=eval_losses).to_csv('./loss_regression.csv')
 
-        # save model    
-        if (epoch + 1) % 20 == 0:
-            torch.save(model.state_dict(), './checkpoint_%d.pth' % (epoch + 1))
-            torch.save(optimizer.state_dict(), './optim_%d.pth' % (epoch + 1))
-
+        # save model
+        is_best = False
+        if epo_eval_loss < best_loss:
+            best_loss = epo_eval_loss
+            is_best = True
+        save_checkpoint({
+            'epoch': args.start_epoch+epoch+1,
+            'best_loss': best_loss,
+            'state_dict': model.state_dict(),
+            'optimizer': optimizer.state_dict(),
+        }, is_best)
+        
         # update learning rate
         #if (epoch + 1) % 20 == 0:
             #curr_lr /= 3
@@ -103,7 +155,7 @@ def update_lr(optimizer, lr):
         param_group['lr'] = lr
 
 
-def evaluate(args, model, criterion, val_dataset, epo_no):
+def evaluate(args, model, criterion, val_dataset, epo_no, get_gradient, cos):
     
     losses = []
     dataloader = DataLoader(batch_size=args.batch_size,
@@ -118,17 +170,40 @@ def evaluate(args, model, criterion, val_dataset, epo_no):
             images = images.to(device)
             labels = labels.to(device)
 
+            ones = torch.ones(labels.size(0), 1, labels.size(2),labels.size(3)).float().cuda()
+            ones = torch.autograd.Variable(ones)
+            
             outputs = model(images)
             
-            loss = criterion(outputs, labels)
+            # depth loss + gradient loss + normal loss
+            depth_grad = get_gradient(labels)
+            output_grad = get_gradient(outputs)
+            depth_grad_dx = depth_grad[:, 0, :, :].contiguous().view_as(labels)
+            depth_grad_dy = depth_grad[:, 1, :, :].contiguous().view_as(labels)
+            output_grad_dx = output_grad[:, 0, :, :].contiguous().view_as(labels)
+            output_grad_dy = output_grad[:, 1, :, :].contiguous().view_as(labels)
+
+            depth_normal = torch.cat((-depth_grad_dx, -depth_grad_dy, ones), 1)
+            output_normal = torch.cat((-output_grad_dx, -output_grad_dy, ones), 1)
+
+            loss_depth = torch.log(torch.abs(outputs - labels) + 0.5).mean()
+            loss_dx = torch.log(torch.abs(output_grad_dx - depth_grad_dx) + 0.5).mean()
+            loss_dy = torch.log(torch.abs(output_grad_dy - depth_grad_dy) + 0.5).mean()
+            loss_normal = torch.abs(1 - cos(output_normal, depth_normal)).mean()
+
+            loss = loss_depth + loss_normal + (loss_dx + loss_dy)
+            
+            # loss
+            #loss = criterion(outputs, labels)
             losses.append(loss.item())
         
         mean_val_loss = np.mean(losses)
 
-        np.save('./val_images_%d.npy' % epo_no, images.cpu().numpy().astype(np.uint8))
-        np.save('./val_labels_%d.npy' % epo_no, labels.cpu().numpy().astype(np.float32))
-        np.save('./val_preds_%d.npy' % epo_no, outputs.cpu().numpy().astype(np.float32))
-      
+        if epo_no % 10 == 0:
+            np.save('./val_images_%d.npy' % epo_no, images.cpu().numpy().astype(np.uint8))
+            np.save('./val_labels_%d.npy' % epo_no, labels.cpu().numpy())
+            np.save('./val_preds_%d.npy' % epo_no, outputs.cpu().numpy())
+            
     return mean_val_loss
 
 def test(args, model, test_dataset):
@@ -145,6 +220,7 @@ def test(args, model, test_dataset):
 
             outputs = model(images)
             np.save('xxx.npy', outputs)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch UNet Training')
@@ -199,6 +275,11 @@ if __name__ == '__main__':
                         help='evaluate model on validation set')
     parser.add_argument('-d', '--debug', dest='debug', action='store_true',
                         help='show intermediate results')
+    parser.add_argument('--best-loss', type=float, default=np.float('inf'),
+                        help='best (minimum) loss of current model.')
+    parser.add_argument('--start-epoch', type=int, default=0,
+                        help='trained epoch of current model.')
+
 
 
     main(parser.parse_args())

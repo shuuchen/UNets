@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import Dataset
 from torchvision.transforms import functional as F
 from torchvision import transforms
+from image_augment_pairs import *
 
 class RoomDataset(Dataset):
     def __init__(self, file_path, train=True, augment=False):
@@ -57,27 +58,19 @@ class RoomDataset(Dataset):
         label = np.load(os.path.join(self.label_dir, self.list[index] + '.npy'))
 
         height, width = label.shape
+        
         if self.train and self.augment:
+            
           # random rotations
-          if np.random.randint(2) == 0:
-              ang = np.random.choice([90, -90])
-              image = np.dstack([F.rotate(self._np2pil(image[:, :, i]), ang) for i in range(3)])
-              label = np.asarray(F.rotate(self._np2pil(label), ang))
+          random_rotation(image, label)
 
           # random h-flips
-          if np.random.randint(2) == 0:
-              image = np.dstack([F.hflip(self._np2pil(image[:, :, i])) for i in range(3)])
-              label = np.asarray(F.hflip(self._np2pil(label)))
+          horizontal_flip(image, label)
 
           # random v-flips
-          if np.random.randint(2) == 0:
-              image = np.dstack([F.vflip(self._np2pil(image[:, :, i])) for i in range(3)])
-              label = np.asarray(F.vflip(self._np2pil(label)))
+          vertical_flip(image, label)
 
           # random crops
-          if np.random.randint(2) == 0:
-              i, j, h, w = transforms.RandomCrop.get_params(self._np2pil(label), output_size=(height//2, width//2))
-              image = np.dstack([F.resized_crop(self._np2pil(image[:, :, ii]), i, j, h, w, (height, width)) for ii in range(3)])
-              label = np.asarray(F.resized_crop(self._np2pil(label), i, j, h, w, (height, width)))
+          #scale_augmentation(image, label)
 
         return self._to_tensor(image), self._to_tensor(label)
