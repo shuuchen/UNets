@@ -11,8 +11,11 @@ class RoomDataset(Dataset):
         self.augment = augment
         self.train = train
 
-        self.img_list = [f for f in os.listdir(file_path) if 'image' in f]
-        self.label_list = [f.replace('image', 'room') for f in self.img_list]
+        if self.train:
+          self.img_list = [f for f in os.listdir(file_path) if 'image' in f]
+          self.label_list = [f.replace('image', 'room') for f in self.img_list]
+        else:
+          self.img_list = [f for f in os.listdir(file_path)]
 
     def __len__(self):
         return len(self.img_list)
@@ -25,6 +28,10 @@ class RoomDataset(Dataset):
     def __getitem__(self, index):
         
         image = np.load(os.path.join(self.file_path, self.img_list[index])).transpose(1,2,0)
+
+        if not self.train:
+            return self._to_tensor(image).permute(2,0,1), self.img_list[index]
+
         label = np.load(os.path.join(self.file_path, self.label_list[index]))
 
         height, width = label.shape

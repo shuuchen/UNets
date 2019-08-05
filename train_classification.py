@@ -46,7 +46,7 @@ def main(args):
             raise '=> test data path should be specified'
         if not args.resume or not os.path.isfile(args.resume):
             raise '=> resume not specified or no checkpoint found'
-        test_dataset = RoomDataset(file_path=args.test_image_path)
+        test_dataset = RoomDataset(file_path=args.test_image_path, train=False)
         model = ResUNet(3, 12).to(device)
         checkpoint = torch.load(args.resume)
         model.load_state_dict(checkpoint['state_dict'])
@@ -168,14 +168,12 @@ def test(args, model, test_dataset):
     model.eval()
     with torch.no_grad():
         data_iterator = tqdm(dataloader, total=len(test_dataset) // args.batch_size + 1)
-        for images, labels in data_iterator:
-
+        for images, img_names in data_iterator:
             images = images.to(device)
-            labels = labels.to(device)
-
+                
             outputs = model(images)
-            outputs = torch.argmax(outputs, dim=1)
-            np.save('xxx.npy', outputs)
+            #outputs = torch.argmax(outputs, dim=1)
+            np.save('./test_batch_rooms/%s' % img_names, outputs[0].cpu().numpy())
 
 
 if __name__ == '__main__':
