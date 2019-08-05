@@ -2,7 +2,6 @@ import os
 import argparse
 import torch
 import shutil
-import sobel
 
 import torch.optim as optim
 import torch.nn as nn
@@ -12,6 +11,7 @@ import pandas as pd
 from torch.utils.data import DataLoader
 from models.res_unet_regressor import ResUNet
 from dataloader_regressor import *
+from loss import *
 from tqdm import tqdm
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -59,14 +59,10 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
     if is_best:
         shutil.copyfile(filename, 'model_best.pth.tar')
 
-
 def train(args, model, optimizer, train_dataset, val_dataset):
 
     criterion = nn.L1Loss()
     
-    cos = nn.CosineSimilarity(dim=1, eps=0)
-    get_gradient = sobel.Sobel().cuda()
-
     # epoch-wise losses
     train_losses = []
     eval_losses = []
@@ -88,29 +84,12 @@ def train(args, model, optimizer, train_dataset, val_dataset):
         
             images = images.to(device)
             labels = labels.to(device)
-
-            ones = torch.ones(labels.size(0), 1, labels.size(2),labels.size(3)).float().cuda()
-            ones = torch.autograd.Variable(ones)
         
             outputs = model(images)
             
             # depth loss + gradient loss + normal loss
-            depth_grad = get_gradient(labels)
-            output_grad = get_gradient(outputs)
-            depth_grad_dx = depth_grad[:, 0, :, :].contiguous().view_as(labels)
-            depth_grad_dy = depth_grad[:, 1, :, :].contiguous().view_as(labels)
-            output_grad_dx = output_grad[:, 0, :, :].contiguous().view_as(labels)
-            output_grad_dy = output_grad[:, 1, :, :].contiguous().view_as(labels)
-
-            depth_normal = torch.cat((-depth_grad_dx, -depth_grad_dy, ones), 1)
-            output_normal = torch.cat((-output_grad_dx, -output_grad_dy, ones), 1)
-
-            loss_depth = torch.log(torch.abs(outputs - labels) + 0.5).mean()
-            loss_dx = torch.log(torch.abs(output_grad_dx - depth_grad_dx) + 0.5).mean()
-            loss_dy = torch.log(torch.abs(output_grad_dy - depth_grad_dy) + 0.5).mean()
-            loss_normal = torch.abs(1 - cos(output_normal, depth_normal)).mean()
-
-            train_loss = loss_depth + loss_normal + (loss_dx + loss_dy)
+            #train_loss = loss_depth + loss_normal + (loss_dx + loss_dy)
+            train_loss = depth_loss(labels, outputs)# + gradient_loss(labels, outputs)
     
             # loss
             #train_loss = criterion(outputs, labels)
@@ -126,7 +105,7 @@ def train(args, model, optimizer, train_dataset, val_dataset):
         print('mean train loss: %.4f' % epo_train_loss)
         train_losses.append(epo_train_loss)
         
-        epo_eval_loss = evaluate(args, model, criterion, val_dataset, args.start_epoch+epoch+1, get_gradient, cos)
+        epo_eval_loss = evaluate(args, model, criterion, val_dataset, args.start_epoch+epoch+1)
         print('mean val loss: %.4f' % epo_eval_loss)
         eval_losses.append(epo_eval_loss)
         
@@ -155,7 +134,7 @@ def update_lr(optimizer, lr):
         param_group['lr'] = lr
 
 
-def evaluate(args, model, criterion, val_dataset, epo_no, get_gradient, cos):
+def evaluate(args, model, criterion, val_dataset, epo_no):
     
     losses = []
     dataloader = DataLoader(batch_size=args.batch_size,
@@ -169,29 +148,11 @@ def evaluate(args, model, criterion, val_dataset, epo_no, get_gradient, cos):
 
             images = images.to(device)
             labels = labels.to(device)
-
-            ones = torch.ones(labels.size(0), 1, labels.size(2),labels.size(3)).float().cuda()
-            ones = torch.autograd.Variable(ones)
             
             outputs = model(images)
             
             # depth loss + gradient loss + normal loss
-            depth_grad = get_gradient(labels)
-            output_grad = get_gradient(outputs)
-            depth_grad_dx = depth_grad[:, 0, :, :].contiguous().view_as(labels)
-            depth_grad_dy = depth_grad[:, 1, :, :].contiguous().view_as(labels)
-            output_grad_dx = output_grad[:, 0, :, :].contiguous().view_as(labels)
-            output_grad_dy = output_grad[:, 1, :, :].contiguous().view_as(labels)
-
-            depth_normal = torch.cat((-depth_grad_dx, -depth_grad_dy, ones), 1)
-            output_normal = torch.cat((-output_grad_dx, -output_grad_dy, ones), 1)
-
-            loss_depth = torch.log(torch.abs(outputs - labels) + 0.5).mean()
-            loss_dx = torch.log(torch.abs(output_grad_dx - depth_grad_dx) + 0.5).mean()
-            loss_dy = torch.log(torch.abs(output_grad_dy - depth_grad_dy) + 0.5).mean()
-            loss_normal = torch.abs(1 - cos(output_normal, depth_normal)).mean()
-
-            loss = loss_depth + loss_normal + (loss_dx + loss_dy)
+            loss = depth_loss(labels, outputs)# + gradient_loss(labels, outputs)
             
             # loss
             #loss = criterion(outputs, labels)
