@@ -43,18 +43,59 @@ class conv_block(nn.Module):
         x = self.conv(x)
         return x
 
+class res_conv_block(nn.Module):
+    def __init__(self, ch_in, ch_out):
+        super(res_conv_block, self).__init__()
+
+        bn = nn.BatchNorm2d
+
+        self.conv1 = nn.Conv2d(ch_in, ch_out, kernel_size=3, padding=1, bias=True)
+        self.bn1 = bn(out_size)
+        self.relu1 = nn.ReLU()
+
+        self.conv2 = nn.Conv2d(ch_out, ch_out, kernel_size=3, padding=1, bias=True)
+        self.bn2 = bn(out_size)
+        self.relu2 = nn.ReLU()
+        
+        self.conv3 = nn.Conv2d(ch_out, ch_out, kernel_size=3, padding=1, bias=True)
+        self.bn3 = bn(out_size)
+        self.relu3 = nn.ReLU()
+       
+    def forward(self, x):
+
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu1(x)
+
+        identity = x
+        
+        out = self.conv2(x)
+        out = self.bn2(out)
+        out = self.relu2(out)
+        
+        out = self.conv3(out)
+        out = self.bn3(out)
+        
+        out += identity
+        out = self.relu3(out)
+        
+        return out
+
 class up_conv(nn.Module):
-    def __init__(self,ch_in,ch_out):
+    def __init__(self,ch_in,ch_out, up_mode='upsample'):
         super(up_conv,self).__init__()
-        self.up = nn.Sequential(
-            nn.Upsample(scale_factor=2),
-            nn.Conv2d(ch_in,ch_out,kernel_size=3,stride=1,padding=1,bias=True),
-            nn.BatchNorm2d(ch_out),
-            nn.ReLU(inplace=True)
-        )
+        if up_mode == 'upsample':
+          self.up = nn.Sequential(nn.Upsample(scale_factor=2),
+                                  nn.Conv2d(ch_in,ch_out,kernel_size=3,stride=1,padding=1,bias=True))
+        elif up_mode == 'upconv':
+          self.up = nn.ConvTranspose2d(ch_in, ch_out, kernel_size=2, stride=2)
+        self.bn = nn.BatchNorm2d(ch_out),
+        self.relu = nn.ReLU(inplace=True)
 
     def forward(self,x):
         x = self.up(x)
+        x = self.bn(x)
+        x = self.relu(x)
         return x
 
 class Recurrent_block(nn.Module):
@@ -141,23 +182,23 @@ class U_Net(nn.Module):
         
         self.Maxpool = nn.MaxPool2d(kernel_size=2,stride=2)
 
-        self.Conv1 = conv_block(ch_in=img_ch,ch_out=64)
-        self.Conv2 = conv_block(ch_in=64,ch_out=128)
-        self.Conv3 = conv_block(ch_in=128,ch_out=256)
-        self.Conv4 = conv_block(ch_in=256,ch_out=512)
-        self.Conv5 = conv_block(ch_in=512,ch_out=1024)
+        self.Conv1 = res_conv_block(ch_in=img_ch,ch_out=64)
+        self.Conv2 = res_conv_block(ch_in=64,ch_out=128)
+        self.Conv3 = res_conv_block(ch_in=128,ch_out=256)
+        self.Conv4 = res_conv_block(ch_in=256,ch_out=512)
+        self.Conv5 = res_conv_block(ch_in=512,ch_out=1024)
 
         self.Up5 = up_conv(ch_in=1024,ch_out=512)
-        self.Up_conv5 = conv_block(ch_in=1024, ch_out=512)
+        self.Up_conv5 = res_conv_block(ch_in=1024, ch_out=512)
 
         self.Up4 = up_conv(ch_in=512,ch_out=256)
-        self.Up_conv4 = conv_block(ch_in=512, ch_out=256)
+        self.Up_conv4 = res_conv_block(ch_in=512, ch_out=256)
         
         self.Up3 = up_conv(ch_in=256,ch_out=128)
-        self.Up_conv3 = conv_block(ch_in=256, ch_out=128)
+        self.Up_conv3 = res_conv_block(ch_in=256, ch_out=128)
         
         self.Up2 = up_conv(ch_in=128,ch_out=64)
-        self.Up_conv2 = conv_block(ch_in=128, ch_out=64)
+        self.Up_conv2 = res_conv_block(ch_in=128, ch_out=64)
 
         self.Conv_1x1 = nn.Conv2d(64,output_ch,kernel_size=1,stride=1,padding=0)
 
@@ -279,27 +320,27 @@ class AttU_Net(nn.Module):
         
         self.Maxpool = nn.MaxPool2d(kernel_size=2,stride=2)
 
-        self.Conv1 = conv_block(ch_in=img_ch,ch_out=64)
-        self.Conv2 = conv_block(ch_in=64,ch_out=128)
-        self.Conv3 = conv_block(ch_in=128,ch_out=256)
-        self.Conv4 = conv_block(ch_in=256,ch_out=512)
-        self.Conv5 = conv_block(ch_in=512,ch_out=1024)
+        self.Conv1 = res_conv_block(ch_in=img_ch,ch_out=64)
+        self.Conv2 = res_conv_block(ch_in=64,ch_out=128)
+        self.Conv3 = res_conv_block(ch_in=128,ch_out=256)
+        self.Conv4 = res_conv_block(ch_in=256,ch_out=512)
+        self.Conv5 = res_conv_block(ch_in=512,ch_out=1024)
 
         self.Up5 = up_conv(ch_in=1024,ch_out=512)
         self.Att5 = Attention_block(F_g=512,F_l=512,F_int=256)
-        self.Up_conv5 = conv_block(ch_in=1024, ch_out=512)
+        self.Up_conv5 = res_conv_block(ch_in=1024, ch_out=512)
 
         self.Up4 = up_conv(ch_in=512,ch_out=256)
         self.Att4 = Attention_block(F_g=256,F_l=256,F_int=128)
-        self.Up_conv4 = conv_block(ch_in=512, ch_out=256)
+        self.Up_conv4 = res_conv_block(ch_in=512, ch_out=256)
         
         self.Up3 = up_conv(ch_in=256,ch_out=128)
         self.Att3 = Attention_block(F_g=128,F_l=128,F_int=64)
-        self.Up_conv3 = conv_block(ch_in=256, ch_out=128)
+        self.Up_conv3 = res_conv_block(ch_in=256, ch_out=128)
         
         self.Up2 = up_conv(ch_in=128,ch_out=64)
         self.Att2 = Attention_block(F_g=64,F_l=64,F_int=32)
-        self.Up_conv2 = conv_block(ch_in=128, ch_out=64)
+        self.Up_conv2 = res_conv_block(ch_in=128, ch_out=64)
 
         self.Conv_1x1 = nn.Conv2d(64,output_ch,kernel_size=1,stride=1,padding=0)
 
