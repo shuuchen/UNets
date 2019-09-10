@@ -10,6 +10,7 @@ import pandas as pd
 
 from torch.utils.data import DataLoader
 from models.res_unet_regressor import ResUNet
+from models.network import *
 from dataloader_regressor import *
 from loss import *
 from tqdm import tqdm
@@ -88,8 +89,7 @@ def train(args, model, optimizer, train_dataset, val_dataset):
             outputs = model(images)
             
             # depth loss + gradient loss + normal loss
-            #train_loss = loss_depth + loss_normal + (loss_dx + loss_dy)
-            train_loss = depth_loss(labels, outputs)# + gradient_loss(labels, outputs)
+            train_loss = depth_loss(labels, outputs) + gradient_loss(labels, outputs)
     
             # loss
             #train_loss = criterion(outputs, labels)
@@ -152,7 +152,7 @@ def evaluate(args, model, criterion, val_dataset, epo_no):
             outputs = model(images)
             
             # depth loss + gradient loss + normal loss
-            loss = depth_loss(labels, outputs)# + gradient_loss(labels, outputs)
+            loss = depth_loss(labels, outputs) + gradient_loss(labels, outputs)
             
             # loss
             #loss = criterion(outputs, labels)
@@ -207,7 +207,7 @@ if __name__ == '__main__':
                         help='optimizers')
     parser.add_argument('-j', '--workers', default=16, type=int, metavar='N',
                         help='number of data loading workers (default: 16)')
-    parser.add_argument('--epochs', default=100, type=int, metavar='N',
+    parser.add_argument('--epochs', default=1000, type=int, metavar='N',
                         help='number of total epochs to run')
     parser.add_argument('--batch-size', default=8, type=int, metavar='N',
                         help='mini-batch size')

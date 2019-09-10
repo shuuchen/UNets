@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+from .cbam import *
 
 
 class ResUNet(nn.Module):
@@ -83,10 +84,10 @@ class ResUNet(nn.Module):
             x = up(x, blocks[-i - 1])
 
         return self.last(x)
-
+    
 
 class UNetResConvBlock(nn.Module):
-    def __init__(self, in_size, out_size, padding, batch_norm):
+    def __init__(self, in_size, out_size, padding, batch_norm, use_cbam=False):
         super(UNetResConvBlock, self).__init__()
 
         if batch_norm:
@@ -103,6 +104,11 @@ class UNetResConvBlock(nn.Module):
         self.conv3 = nn.Conv2d(out_size, out_size, kernel_size=3, padding=int(padding))
         self.bn3 = bn(out_size)
         self.relu3 = nn.ReLU()
+        
+        if use_cbam:
+            self.cbam = CBAM(out_size, 16 )
+        else:
+            self.cbam = None
 
     def forward(self, x):
 
@@ -119,6 +125,10 @@ class UNetResConvBlock(nn.Module):
         out = self.conv3(out)
         out = self.bn3(out)
         
+        
+        if self.cbam:
+            out = self.cbam(out)
+        
         out += identity
         out = self.relu3(out)
         
@@ -128,14 +138,15 @@ class UNetResConvBlock(nn.Module):
 class UNetUpBlock(nn.Module):
     def __init__(self, in_size, out_size, up_mode, padding, batch_norm):
         super(UNetUpBlock, self).__init__()
+        
         if up_mode == 'upconv':
             self.up = nn.ConvTranspose2d(in_size, out_size, kernel_size=2, stride=2)
         elif up_mode == 'upsample':
             self.up = nn.Sequential(
                 nn.Upsample(mode='bilinear', scale_factor=2),
-                nn.Conv2d(in_size, out_size, kernel_size=1),
-            )
-
+                nn.Conv2d(in_size, out_size, kernel_size=1))
+            
+        self.attn = Attention_block(F_g=out_size, F_l=out_size, F_int=out_size // 2)
         self.conv_block = UNetResConvBlock(in_size, out_size, padding, batch_norm)
 
     def center_crop(self, layer, target_size):
@@ -149,7 +160,39 @@ class UNetUpBlock(nn.Module):
     def forward(self, x, bridge):
         up = self.up(x)
         crop1 = self.center_crop(bridge, up.shape[2:])
-        out = torch.cat([up, crop1], 1)
+        a = self.attn(g=up, x=crop1)
+        out = torch.cat([up, a], 1)
+        #out = torch.cat([up, crop1], 1)
         out = self.conv_block(out)
 
         return out
+
+    
+class Attention_block(nn.Module):
+    def __init__(self,F_g,F_l,F_int):
+        super(Attention_block,self).__init__()
+        self.W_g = nn.Sequential(
+            nn.Conv2d(F_g, F_int, kernel_size=1,stride=1,padding=0,bias=True),
+            nn.BatchNorm2d(F_int)
+            )
+        
+        self.W_x = nn.Sequential(
+            nn.Conv2d(F_l, F_int, kernel_size=1,stride=1,padding=0,bias=True),
+            nn.BatchNorm2d(F_int)
+        )
+
+        self.psi = nn.Sequential(
+            nn.Conv2d(F_int, 1, kernel_size=1,stride=1,padding=0,bias=True),
+            nn.BatchNorm2d(1),
+            nn.Sigmoid()
+        )
+        
+        self.relu = nn.ReLU(inplace=True)
+        
+    def forward(self,g,x):
+        g1 = self.W_g(g)
+        x1 = self.W_x(x)
+        psi = self.relu(g1+x1)
+        psi = self.psi(psi)
+
+        return x*psi
