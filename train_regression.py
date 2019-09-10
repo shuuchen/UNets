@@ -28,7 +28,8 @@ def main(args):
         if args.val_image_path:
             val_dataset = RoomDataset(file_path=args.val_image_path)
 
-        model = ResUNet(3, 1).to(device)
+        #model = ResUNet(3, 1).to(device)
+        model = U_Net(3, 1).to(device)
         optimizer = torch.optim.Adam(params=model.parameters(), lr=0.0003)
 
         if args.resume:
@@ -49,7 +50,8 @@ def main(args):
         if not args.resume or not os.path.isfile(args.resume):
             raise '=> resume not specified or no checkpoint found'
         test_dataset = RoomDataset(file_path=args.test_image_path)
-        model = ResUNet(3, 1).to(device)
+        #model = ResUNet(3, 1).to(device)
+        model = U_Net(3, 1).to(device)
         checkpoint = torch.load(args.resume)
         model.load_state_dict(checkpoint['state_dict'])
         test(args, model, test_dataset)

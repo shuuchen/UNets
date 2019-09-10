@@ -50,15 +50,15 @@ class res_conv_block(nn.Module):
         bn = nn.BatchNorm2d
 
         self.conv1 = nn.Conv2d(ch_in, ch_out, kernel_size=3, padding=1, bias=True)
-        self.bn1 = bn(out_size)
+        self.bn1 = bn(ch_out)
         self.relu1 = nn.ReLU()
 
         self.conv2 = nn.Conv2d(ch_out, ch_out, kernel_size=3, padding=1, bias=True)
-        self.bn2 = bn(out_size)
+        self.bn2 = bn(ch_out)
         self.relu2 = nn.ReLU()
         
         self.conv3 = nn.Conv2d(ch_out, ch_out, kernel_size=3, padding=1, bias=True)
-        self.bn3 = bn(out_size)
+        self.bn3 = bn(ch_out)
         self.relu3 = nn.ReLU()
        
     def forward(self, x):
@@ -85,11 +85,11 @@ class up_conv(nn.Module):
     def __init__(self,ch_in,ch_out, up_mode='upsample'):
         super(up_conv,self).__init__()
         if up_mode == 'upsample':
-          self.up = nn.Sequential(nn.Upsample(scale_factor=2),
+            self.up = nn.Sequential(nn.Upsample(scale_factor=2),
                                   nn.Conv2d(ch_in,ch_out,kernel_size=3,stride=1,padding=1,bias=True))
         elif up_mode == 'upconv':
-          self.up = nn.ConvTranspose2d(ch_in, ch_out, kernel_size=2, stride=2)
-        self.bn = nn.BatchNorm2d(ch_out),
+            self.up = nn.ConvTranspose2d(ch_in, ch_out, kernel_size=2, stride=2)
+        self.bn = nn.BatchNorm2d(ch_out)
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self,x):
