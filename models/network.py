@@ -38,7 +38,6 @@ class conv_block(nn.Module):
             nn.ReLU(inplace=True)
         )
 
-
     def forward(self,x):
         x = self.conv(x)
         return x
@@ -82,7 +81,7 @@ class res_conv_block(nn.Module):
         return out
 
 class up_conv(nn.Module):
-    def __init__(self,ch_in,ch_out, up_mode='upsample'):
+    def __init__(self,ch_in,ch_out, up_mode='upconv'):
         super(up_conv,self).__init__()
         if up_mode == 'upsample':
             self.up = nn.Sequential(nn.Upsample(scale_factor=2),
