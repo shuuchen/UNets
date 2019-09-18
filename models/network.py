@@ -107,15 +107,24 @@ class Recurrent_block(nn.Module):
             nn.BatchNorm2d(ch_out),
             nn.ReLU(inplace=True)
         )
+        self.last_conv = nn.Conv2d(ch_out,ch_out,kernel_size=3,stride=1,padding=1,bias=True)
+        self.last_bn = nn.BatchNorm2d(ch_out)
+        self.last_relu = nn.ReLU(inplace=True)
 
     def forward(self,x):
+        
         for i in range(self.t):
 
             if i==0:
                 x1 = self.conv(x)
             
             x1 = self.conv(x+x1)
-        return x1
+            
+            if i == self.t-1:
+                x1 = self.last_conv(x1)
+                x1 = self.last_bn(x1)
+        x1 += x
+        return self.last_relu(x1)
         
 class RRCNN_block(nn.Module):
     def __init__(self,ch_in,ch_out,t=2):

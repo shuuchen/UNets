@@ -29,7 +29,7 @@ def main(args):
             val_dataset = RoomDataset(file_path=args.val_image_path)
 
         #model = ResUNet(3, 1).to(device)
-        model = U_Net(3, 1).to(device)
+        model = R2AttU_Net(3, 1).to(device)
         optimizer = torch.optim.Adam(params=model.parameters(), lr=0.0003)
 
         if args.resume:
@@ -51,7 +51,7 @@ def main(args):
             raise '=> resume not specified or no checkpoint found'
         test_dataset = RoomDataset(file_path=args.test_image_path)
         #model = ResUNet(3, 1).to(device)
-        model = U_Net(3, 1).to(device)
+        model = R2AttU_Net(3, 1).to(device)
         checkpoint = torch.load(args.resume)
         model.load_state_dict(checkpoint['state_dict'])
         test(args, model, test_dataset)
@@ -211,7 +211,7 @@ if __name__ == '__main__':
                         help='number of data loading workers (default: 16)')
     parser.add_argument('--epochs', default=1000, type=int, metavar='N',
                         help='number of total epochs to run')
-    parser.add_argument('--batch-size', default=8, type=int, metavar='N',
+    parser.add_argument('--batch-size', default=4, type=int, metavar='N',
                         help='mini-batch size')
     parser.add_argument('--lr', '--learning-rate', default=2.5e-4, type=float,
                         metavar='LR', help='initial learning rate')

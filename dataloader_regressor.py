@@ -22,7 +22,7 @@ class RoomDataset(Dataset):
         
         self.list = [l[:-1] for l in self.list]
         
-        self.img_dir = '../../data/image'
+        self.img_dir = '../../data/image/gen_images_north_30_only'
         self.label_dir = '../../data/height_arr'
 
     def __len__(self):
@@ -54,7 +54,7 @@ class RoomDataset(Dataset):
 
     def __getitem__(self, index):
         
-        image = cv2.imread(os.path.join(self.img_dir, self.list[index] + '.png'))
+        image = cv2.imread(os.path.join(self.img_dir, self.list[index] + '_000000.png'))
         label = np.load(os.path.join(self.label_dir, self.list[index] + '.npy'))
 
         height, width = label.shape
